@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+    <head>
+        <script src='/socket.io/socket.io.js'></script>
+        <script>
+            var socket = io();
+
+            socket.on('welcome', function(players) {
+                listPlayers(players);
+            });
+
+            socket.on('error', console.error.bind(console));
+            socket.on('message', console.log.bind(console));
+
+            function setNick(nick) {
+                socket.emit('nick', nick);
+            }
+
+            function listPlayers(players) {
+                var playerList = document.getElementById('player-list');
+                playerList.innerHTML = '';
+
+                players.forEach(player => {
+                    var text = document.createTextNode(player.nick),
+                        el = document.createElement('li');
+
+                    el.appendChild(text);
+                    playerList.appendChild(el);
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <form onsubmit="setNick(document.getElementById('nick').value); return false;">
+        <input type="text" id="nick" name="nick"><button type="submit">Set nickname</button>
+        </form>
+        <ul id='player-list'></ul>
+    </body>
+</html>
