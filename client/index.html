@@ -2,34 +2,7 @@
 <html>
 
 <head>
-    <script src='/socket.io/socket.io.js'></script>
-    <script>
-        var socket = io();
 
-        socket.on('welcome', function (players) {
-            listPlayers(players);
-        });
-
-        socket.on('error', console.error.bind(console));
-        socket.on('message', console.log.bind(console));
-
-        function setNick(nick) {
-            socket.emit('nick', nick);
-        }
-
-        function listPlayers(players) {
-            var playerList = document.getElementById('player-list');
-            playerList.innerHTML = '';
-
-            players.forEach(player => {
-                var text = document.createTextNode(player.nick),
-                    el = document.createElement('li');
-
-                el.appendChild(text);
-                playerList.appendChild(el);
-            });
-        }
-    </script>
 
 
 </head>
@@ -42,8 +15,11 @@
 
     <button onclick="resetGame(); return false;">Reset game</button>
 
+    <script src='/socket.io/socket.io.js'></script>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.23.0/dist/phaser.min.js"></script>
     <script>
+        var socket;
+
         var config = {
             type: Phaser.AUTO,
             parent: 'phaser-example',
@@ -68,6 +44,7 @@
         function create() {
             phaser = this;
 
+            socket = initSocket();
             initDeck();
 
             this.input.on('dragstart', function (pointer, gameObject) {
@@ -83,21 +60,10 @@
             }, this);
 
             this.input.on('dragend', function (pointer, gameObject) {
-                socket.emit('dragend', { name: gameObject.frame.name, x: gameObject.x, y: gameObject.y });
-            }, this);
-
-            socket.on('dragend', function (data) {
-                if (data.name !== 'back') {
-                    moveCard(data.name, data.x, data.y);
+                if (gameObject.frame.name !== 'back') {
+                    socket.emit('dragend', { name: gameObject.frame.name, x: gameObject.x, y: gameObject.y });
                 }
-            });
-
-            socket.on('reset', initDeck);
-
-            socket.on('picked', function (cardName) {
-                console.log(cardName);
-                flipCard(cardName);
-            });
+            }, this);
 
         }
 
@@ -124,10 +90,9 @@
                 // console.log(pointer);
                 // console.log(pointer.downX);
                 // console.log(pointer.x);
-
                 // if not dragged
                 if (pointer.x === pointer.downX && pointer.y === pointer.downY) {
-                    console.log('pick a card')
+                    console.log('PICK A CARD');
                     socket.emit('pick');
                 }
             });
@@ -148,6 +113,66 @@
         function moveCard(cardName, x, y) {
             board[cardName].x = x;
             board[cardName].y = y;
+        }
+
+        function initSocket() {
+            socket = io();
+
+            socket.on('welcome', function (players) {
+                listPlayers(players);
+            });
+
+            socket.on('board', function (board) {
+                initBoard(board);
+            });
+
+            socket.on('goodbye', function (data) {
+                listPlayers(data.players);
+            });
+
+            socket.on('error', console.error.bind(console));
+            socket.on('message', console.log.bind(console));
+
+            socket.on('dragend', function (data) {
+                if (data.name !== 'back') {
+                    moveCard(data.name, data.x, data.y);
+                }
+            });
+
+            socket.on('reset', initDeck);
+
+            socket.on('picked', function (cardName) {
+                console.log(cardName);
+                flipCard(cardName);
+            });
+
+            return socket;
+        }
+
+        function setNick(nick) {
+            socket.emit('nick', nick);
+        }
+
+        function listPlayers(players) {
+            var playerList = document.getElementById('player-list');
+            playerList.innerHTML = '';
+
+            players.forEach(player => {
+                var text = document.createTextNode(player.nick),
+                    el = document.createElement('li');
+
+                el.appendChild(text);
+                playerList.appendChild(el);
+            });
+        }
+
+        function initBoard(remoteBoard) {
+            console.log('initBoard: ', remoteBoard);
+            Object.keys(remoteBoard).forEach((cardName) => {
+                var card = scene.scenes[0].add.image(remoteBoard[cardName][0], remoteBoard[cardName][1], 'cards', cardName).setInteractive();
+                board[cardName] = card;
+                phaser.input.setDraggable(card);
+            });
         }
     </script>
 </body>
