@@ -1,39 +1,148 @@
 <!doctype html>
 <html>
-    <head>
-        <script src='/socket.io/socket.io.js'></script>
-        <script>
-            var socket = io();
 
-            socket.on('welcome', function(players) {
-                listPlayers(players);
+<head>
+    <script src='/socket.io/socket.io.js'></script>
+    <script>
+        var socket = io();
+
+        socket.on('welcome', function (players) {
+            listPlayers(players);
+        });
+
+        socket.on('error', console.error.bind(console));
+        socket.on('message', console.log.bind(console));
+
+        function setNick(nick) {
+            socket.emit('nick', nick);
+        }
+
+        function listPlayers(players) {
+            var playerList = document.getElementById('player-list');
+            playerList.innerHTML = '';
+
+            players.forEach(player => {
+                var text = document.createTextNode(player.nick),
+                    el = document.createElement('li');
+
+                el.appendChild(text);
+                playerList.appendChild(el);
+            });
+        }
+    </script>
+
+
+</head>
+
+<body>
+    <form onsubmit="setNick(document.getElementById('nick').value); return false;">
+        <input type="text" id="nick" name="nick"><button type="submit">Set nickname</button>
+    </form>
+    <ul id='player-list'></ul>
+
+    <button onclick="resetGame(); return false;">Reset game</button>
+
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.23.0/dist/phaser.min.js"></script>
+    <script>
+        var config = {
+            type: Phaser.AUTO,
+            parent: 'phaser-example',
+            width: 1024,
+            height: 800,
+            scene: {
+                preload: preload,
+                create: create
+            }
+        };
+
+        var game = new Phaser.Game(config);
+        var scene = game.scene;
+        var board = {};
+        var deck = undefined;
+        var phaser;
+
+        function preload() {
+            this.load.atlas('cards', 'assets/cards.png', 'assets/cards.json');
+        }
+
+        function create() {
+            phaser = this;
+
+            initDeck();
+
+            this.input.on('dragstart', function (pointer, gameObject) {
+                this.children.bringToTop(gameObject);
+                if (gameObject.frame.name === 'back') {
+
+                }
+            }, this);
+
+            this.input.on('drag', function (pointer, gameObject, dragX, dragY) {
+                gameObject.x = dragX;
+                gameObject.y = dragY;
+            }, this);
+
+            this.input.on('dragend', function (pointer, gameObject) {
+                socket.emit('dragend', { name: gameObject.frame.name, x: gameObject.x, y: gameObject.y });
+            }, this);
+
+            socket.on('dragend', function (data) {
+                if (data.name !== 'back') {
+                    moveCard(data.name, data.x, data.y);
+                }
             });
 
-            socket.on('error', console.error.bind(console));
-            socket.on('message', console.log.bind(console));
+            socket.on('reset', initDeck);
 
-            function setNick(nick) {
-                socket.emit('nick', nick);
-            }
+            socket.on('picked', function (cardName) {
+                flipCard(cardName);
+            });
 
-            function listPlayers(players) {
-                var playerList = document.getElementById('player-list');
-                playerList.innerHTML = '';
+        }
 
-                players.forEach(player => {
-                    var text = document.createTextNode(player.nick),
-                        el = document.createElement('li');
+        function resetGame() {
+            socket.emit('reset');
+        }
 
-                    el.appendChild(text);
-                    playerList.appendChild(el);
-                });
-            }
-        </script>
-    </head>
-    <body>
-        <form onsubmit="setNick(document.getElementById('nick').value); return false;">
-        <input type="text" id="nick" name="nick"><button type="submit">Set nickname</button>
-        </form>
-        <ul id='player-list'></ul>
-    </body>
+        function initDeck() {
+            if (deck !== undefined) deck.destroy();
+
+            var cards = phaser.textures.get('cards').getFrameNames();
+            cards.shift();
+            socket.emit('cards', cards);
+
+            var x = 800;
+            var y = 100;
+            deck = phaser.add.image(x, y, 'cards', 'back').setInteractive();
+            console.log(deck);
+
+            phaser.input.setDraggable(deck);
+            // phaser.input.dragDistanceThreshold = 30;
+
+            deck.on('pointerup', function (pointer, x, y) {
+                console.log(pointer);
+                // if (pointer.distance = 0) 
+                socket.emit('pick');
+            });
+
+            Object.values(board).forEach(it => {
+                it.destroy();
+            });
+
+            board = {};
+        }
+
+        function flipCard(cardName) {
+            var card = scene.scenes[0].add.image(100, 100, 'cards', cardName).setInteractive();
+            board[cardName] = card;
+            phaser.input.setDraggable(card);
+        }
+
+        function moveCard(cardName, x, y) {
+            board[cardName].x = x;
+            board[cardName].y = y;
+        }
+    </script>
+</body>
+
 </html>
