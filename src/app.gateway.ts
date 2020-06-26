@@ -1,7 +1,7 @@
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
-const colors = ['red', 'blue', 'green', 'orange', 'pink', 'cyan'];
+const colors = ['FF0000', '0000FF', '00FF00', 'FFBC00', 'FF00F8', '00FFD6', 'FBFF00', 'E600FF'];
 
 @WebSocketGateway()
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
