@@ -95,6 +95,7 @@
             socket.on('reset', initDeck);
 
             socket.on('picked', function (cardName) {
+                console.log(cardName);
                 flipCard(cardName);
             });
 
@@ -114,15 +115,21 @@
             var x = 800;
             var y = 100;
             deck = phaser.add.image(x, y, 'cards', 'back').setInteractive();
-            console.log(deck);
+            // console.log(deck);
 
             phaser.input.setDraggable(deck);
             // phaser.input.dragDistanceThreshold = 30;
 
             deck.on('pointerup', function (pointer, x, y) {
-                console.log(pointer);
-                // if (pointer.distance = 0) 
-                socket.emit('pick');
+                // console.log(pointer);
+                // console.log(pointer.downX);
+                // console.log(pointer.x);
+
+                // if not dragged
+                if (pointer.x === pointer.downX && pointer.y === pointer.downY) {
+                    console.log('pick a card')
+                    socket.emit('pick');
+                }
             });
 
             Object.values(board).forEach(it => {
