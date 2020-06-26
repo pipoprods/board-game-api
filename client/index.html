@@ -11,7 +11,7 @@
     <form onsubmit="setNick(document.getElementById('nick').value); return false;">
         <input type="text" id="nick" name="nick"><button type="submit">Set nickname</button>
     </form>
-    <ul id='player-list'></ul>
+    <ul id='player-list' style="list-style: none; padding: 0;"></ul>
 
     <button onclick="resetGame(); return false;">Reset game</button>
 
@@ -159,8 +159,12 @@
 
             players.forEach(player => {
                 var text = document.createTextNode(player.nick),
+                    color = document.createElement('span'),
                     el = document.createElement('li');
 
+                color.setAttribute('style', `background-color: ${player.color}; margin-right: 0.5em; border-radius: 5px;`);
+                color.innerHTML = '&#160;&#160;&#160;';
+                el.appendChild(color);
                 el.appendChild(text);
                 playerList.appendChild(el);
             });

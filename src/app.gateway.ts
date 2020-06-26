@@ -1,6 +1,8 @@
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
+const colors = ['red', 'blue', 'green', 'orange', 'pink', 'cyan'];
+
 @WebSocketGateway()
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
@@ -12,12 +14,18 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async handleConnection(client: Socket): Promise<void> {
         this.players.push({
             id: client.id,
-            nick: client.id
+            nick: client.id,
+            color: this.setPlayerColor(),
         });
 
         // Notify connected clients of new player list
         this.server.emit(`welcome`, this.players);
         client.emit(`board`, this.board);
+    }
+
+    private setPlayerColor() {
+        const usedColors = this.players.map(p => p.color);
+        return colors.sort(() => Math.random() - 0.5).find(color => !usedColors.includes(color));
     }
 
     async handleDisconnect(client: Socket): Promise<void> {
