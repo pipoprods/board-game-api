@@ -59,15 +59,19 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage('pick')
     async onPick(client: Socket): Promise<void> {
+        const owner = client.id;
         const cardName = this.cards.shift();
-        this.board[cardName] = [100, 100];
-        this.server.emit('picked', cardName);
+        this.board[cardName] = {
+            owner,
+            position: [100, 100],
+        };
+        this.server.emit('picked', { cardName, owner });
     }
 
     @SubscribeMessage('dragend')
     async onDragEnd(client: Socket, data: any): Promise<void> {
         console.log(data);
-        this.board[data.name] = [data.x, data.y];
+        this.board[data.name].position = [data.x, data.y];
         this.server.emit('dragend', data);
     }
 }

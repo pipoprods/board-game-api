@@ -36,6 +36,7 @@
         var board = {};
         var deck = undefined;
         var phaser;
+        var colors = {};
 
         function preload() {
             this.load.atlas('cards', 'assets/cards.png', 'assets/cards.json');
@@ -47,11 +48,18 @@
             socket = initSocket();
             initDeck();
 
+            // var graphics = this.add.graphics();
+            // graphics.lineStyle(4, 0xff00ff, 1);
+            // graphics.beginPath();
+            // graphics.arc(400, 300, 200, Phaser.Math.DegToRad(90), Phaser.Math.DegToRad(180), true);
+            // graphics.strokePath();
+
+
             this.input.on('dragstart', function (pointer, gameObject) {
                 this.children.bringToTop(gameObject);
-                if (gameObject.frame.name === 'back') {
+                // if (gameObject.frame.name === 'back') {
 
-                }
+                // }
             }, this);
 
             this.input.on('drag', function (pointer, gameObject, dragX, dragY) {
@@ -60,11 +68,11 @@
             }, this);
 
             this.input.on('dragend', function (pointer, gameObject) {
-                if (gameObject.frame.name !== 'back') {
-                    socket.emit('dragend', { name: gameObject.frame.name, x: gameObject.x, y: gameObject.y });
+                // console.log(gameObject);
+                if (gameObject.name !== 'back') {
+                    socket.emit('dragend', { name: gameObject.name, x: gameObject.x, y: gameObject.y });
                 }
             }, this);
-
         }
 
         function resetGame() {
@@ -81,6 +89,7 @@
             var x = 800;
             var y = 100;
             deck = phaser.add.image(x, y, 'cards', 'back').setInteractive();
+            deck.name = 'back';
             // console.log(deck);
 
             phaser.input.setDraggable(deck);
@@ -92,7 +101,7 @@
                 // console.log(pointer.x);
                 // if not dragged
                 if (pointer.x === pointer.downX && pointer.y === pointer.downY) {
-                    console.log('PICK A CARD');
+                    // console.log('PICK A CARD');
                     socket.emit('pick');
                 }
             });
@@ -104,10 +113,54 @@
             board = {};
         }
 
-        function flipCard(cardName) {
-            var card = scene.scenes[0].add.image(100, 100, 'cards', cardName).setInteractive();
-            board[cardName] = card;
-            phaser.input.setDraggable(card);
+        function flipCard(cardName, owner) {
+            // console.log('OWNER');
+            // console.log(owner);
+            // console.log(colors);
+            // var card = scene.scenes[0].add.image(100, 100, 'cards', cardName).setInteractive();
+
+            var container = drawCard(cardName, owner, 100, 100)
+
+            board[cardName] = container;
+            // phaser.input.setDraggable(card);
+        }
+
+        function drawCard(cardName, ownerId, x, y) {
+
+            var card = phaser.add.image(0, 0, 'cards', cardName);
+
+            var color = colors[ownerId];
+
+            // console.log(`draw ${color} card ${cardName} at ${x} . ${y}`)
+
+            var graphics = phaser.add.graphics();
+            graphics.lineStyle(4, '0x' + color, 1);
+            graphics.beginPath();
+            graphics.arc(-(card.width / 2), -(card.height / 2), 10, Phaser.Math.DegToRad(0), Phaser.Math.DegToRad(90), true);
+            graphics.strokePath()
+
+
+            var container = scene.scenes[0].add.container(x, y, [card, graphics]);
+            container.name = cardName;
+
+            container.setSize(card.width, card.height);
+
+            container.setInteractive();
+            phaser.input.setDraggable(container);
+
+            container.on('pointerover', function () {
+
+                card.setTint(0x44ff44);
+
+            });
+
+            container.on('pointerout', function () {
+
+                card.clearTint();
+
+            });
+
+            return container;
         }
 
         function moveCard(cardName, x, y) {
@@ -123,6 +176,7 @@
             });
 
             socket.on('board', function (board) {
+                // console.log(board);
                 initBoard(board);
             });
 
@@ -141,9 +195,9 @@
 
             socket.on('reset', initDeck);
 
-            socket.on('picked', function (cardName) {
-                console.log(cardName);
-                flipCard(cardName);
+            socket.on('picked', function (data) {
+                // console.log(data.cardName);
+                flipCard(data.cardName, data.owner);
             });
 
             return socket;
@@ -158,6 +212,7 @@
             playerList.innerHTML = '';
 
             players.forEach(player => {
+                colors[player.id] = player.color;
                 var text = document.createTextNode(player.nick),
                     color = document.createElement('span'),
                     el = document.createElement('li');
@@ -168,14 +223,20 @@
                 el.appendChild(text);
                 playerList.appendChild(el);
             });
+
+            // console.log('COLORS');
+            // console.log(colors);
+
         }
 
         function initBoard(remoteBoard) {
-            console.log('initBoard: ', remoteBoard);
+            // console.log('initBoard: ', remoteBoard);
             Object.keys(remoteBoard).forEach((cardName) => {
-                var card = scene.scenes[0].add.image(remoteBoard[cardName][0], remoteBoard[cardName][1], 'cards', cardName).setInteractive();
-                board[cardName] = card;
-                phaser.input.setDraggable(card);
+                var container = drawCard(cardName, remoteBoard[cardName].owner, remoteBoard[cardName].position[0], remoteBoard[cardName].position[1]);
+
+                // var card = scene.scenes[0].add.image(remoteBoard[cardName][0], remoteBoard[cardName][1], 'cards', cardName).setInteractive();
+                board[cardName] = container;
+                // phaser.input.setDraggable(card);
             });
         }
     </script>
